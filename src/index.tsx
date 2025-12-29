@@ -293,7 +293,9 @@ const htmlTemplate = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Monetum OTC Desk</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
@@ -307,8 +309,10 @@ const htmlTemplate = `<!DOCTYPE html>
                     colors: {
                         monetum: {
                             green: '#3DA085',
+                            greenDark: '#2d8a72',
                             dark: '#2A2B41',
                             light: '#f8fafc',
+                            chatBg: '#f5f7f9',
                             success: '#3DA085',
                             error: '#ef4444',
                             muted: '#64748b'
@@ -322,22 +326,76 @@ const htmlTemplate = `<!DOCTYPE html>
         }
     </script>
     <style>
-        body {
+        * {
+            box-sizing: border-box;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
             font-family: 'Inter', sans-serif;
             background: #ffffff;
         }
+        .app-container {
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        @media (min-width: 640px) {
+            .app-container {
+                max-width: 480px;
+                height: 100dvh;
+                padding: 16px;
+            }
+            .widget-container {
+                border-radius: 16px;
+                border: 2px solid #3DA085;
+                box-shadow: 0 4px 24px rgba(61, 160, 133, 0.15);
+                overflow: hidden;
+            }
+        }
         .widget-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             background: #ffffff;
-            border: 2px solid #3DA085;
-            border-radius: 16px;
-            box-shadow: 0 4px 24px rgba(61, 160, 133, 0.15);
+            min-height: 0;
+        }
+        .widget-header {
+            background: #3DA085;
+            padding: 16px;
+            flex-shrink: 0;
         }
         .secure-badge {
-            background: rgba(61, 160, 133, 0.1);
-            border: 1px solid rgba(61, 160, 133, 0.3);
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            background: #f5f7f9;
+            padding: 16px;
+            min-height: 0;
+            -webkit-overflow-scrolling: touch;
+        }
+        .input-area {
+            background: #ffffff;
+            padding: 16px;
+            flex-shrink: 0;
+            border-top: 1px solid #e5e7eb;
+        }
+        .widget-footer {
+            background: #ffffff;
+            padding: 8px 16px;
+            flex-shrink: 0;
+            border-top: 1px solid #f0f0f0;
         }
         .chat-message {
             animation: fadeIn 0.3s ease-out;
+            margin-bottom: 12px;
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -375,23 +433,21 @@ const htmlTemplate = `<!DOCTYPE html>
         }
         .btn-primary {
             background: #3DA085;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
-        .btn-primary:hover {
+        .btn-primary:hover, .btn-primary:active {
             background: #2d8a72;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(61, 160, 133, 0.3);
         }
         .btn-success {
             background: #3DA085;
         }
-        .btn-success:hover {
+        .btn-success:hover, .btn-success:active {
             background: #2d8a72;
         }
         .btn-danger {
             background: #ef4444;
         }
-        .btn-danger:hover {
+        .btn-danger:hover, .btn-danger:active {
             background: #dc2626;
         }
         .pulse-glow {
@@ -404,11 +460,11 @@ const htmlTemplate = `<!DOCTYPE html>
         .markdown-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 10px 0;
-            font-size: 13px;
+            margin: 8px 0;
+            font-size: 12px;
         }
         .markdown-table th, .markdown-table td {
-            padding: 8px 12px;
+            padding: 6px 10px;
             border: 1px solid #e2e8f0;
             text-align: left;
         }
@@ -418,70 +474,84 @@ const htmlTemplate = `<!DOCTYPE html>
         }
         code {
             background: rgba(61, 160, 133, 0.1);
-            padding: 2px 8px;
+            padding: 2px 6px;
             border-radius: 4px;
             font-family: monospace;
             word-break: break-all;
             color: #2A2B41;
-            font-size: 12px;
+            font-size: 11px;
         }
         .agent-bubble {
-            background: #f1f5f9;
+            background: #ffffff;
             color: #2A2B41;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         .user-bubble {
             background: #3DA085;
             color: white;
         }
         .agent-avatar {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             object-fit: cover;
             flex-shrink: 0;
         }
+        .trust-indicators {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            padding: 8px 0;
+            flex-wrap: wrap;
+        }
+        @media (max-width: 639px) {
+            .trust-indicators {
+                display: none;
+            }
+            .widget-footer {
+                padding-bottom: calc(8px + env(safe-area-inset-bottom));
+            }
+            .input-area {
+                padding-bottom: calc(16px + env(safe-area-inset-bottom));
+            }
+        }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
-    <!-- Main Widget -->
-    <div class="relative w-full max-w-lg">
-        <!-- Widget Container -->
-        <div class="widget-container overflow-hidden">
-            <!-- Header -->
-            <div class="bg-white p-4 border-b border-gray-100">
+<body>
+    <div class="app-container">
+        <div class="widget-container">
+            <!-- Header - Green background -->
+            <div class="widget-header">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <!-- Monetum Logo SVG -->
+                        <!-- Monetum Logo SVG - White -->
                         <div class="w-10 h-10">
                             <svg viewBox="0 0 100 100" class="w-full h-full">
-                                <circle cx="50" cy="50" r="45" fill="none" stroke="#3DA085" stroke-width="5"/>
-                                <path d="M30 65 L30 35 L50 50 L70 35 L70 65" fill="none" stroke="#3DA085" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M25 50 L50 35 L75 50" fill="none" stroke="#3DA085" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="white" stroke-width="5"/>
+                                <path d="M30 65 L30 35 L50 50 L70 35 L70 65" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M25 50 L50 35 L75 50" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
                         </div>
                         <div>
-                            <h1 class="text-lg font-semibold text-monetum-dark">Initiate OTC Deal</h1>
-                            <p class="text-xs text-monetum-muted">Monetum Secure Trading</p>
+                            <h1 class="text-lg font-semibold text-white">Initiate OTC Deal</h1>
+                            <p class="text-xs text-white/70">Monetum Secure Trading</p>
                         </div>
                     </div>
-                    <!-- Security Badges -->
-                    <div class="flex items-center gap-2">
-                        <div class="secure-badge px-2 py-1 rounded-full flex items-center gap-1">
-                            <i class="fas fa-shield-halved text-monetum-green text-xs"></i>
-                            <span class="text-xs text-monetum-green font-medium">Secured</span>
-                        </div>
+                    <!-- Security Badge -->
+                    <div class="secure-badge px-2 py-1 rounded-full flex items-center gap-1">
+                        <i class="fas fa-shield-halved text-white text-xs"></i>
+                        <span class="text-xs text-white font-medium">Secured</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Chat Container -->
-            <div id="chatContainer" class="h-[420px] overflow-y-auto p-4 space-y-3 scroll-smooth bg-white">
+            <!-- Chat Container - Light gray background -->
+            <div id="chatContainer" class="chat-container">
                 <!-- Messages will be inserted here -->
             </div>
 
-            <!-- Input Area -->
-            <div id="inputArea" class="p-4 border-t border-gray-100 bg-white">
-                <!-- Dynamic input will be inserted here -->
+            <!-- Input Area - White background -->
+            <div id="inputArea" class="input-area">
                 <div id="startButton" class="text-center">
                     <button onclick="startChat()" class="btn-primary px-8 py-3 rounded-xl text-white font-medium pulse-glow">
                         <i class="fas fa-comments mr-2"></i>
@@ -491,7 +561,7 @@ const htmlTemplate = `<!DOCTYPE html>
             </div>
 
             <!-- Footer -->
-            <div class="bg-gray-50 px-4 py-2 flex items-center justify-between text-xs text-monetum-muted border-t border-gray-100">
+            <div class="widget-footer flex items-center justify-between text-xs text-monetum-muted">
                 <div class="flex items-center gap-2">
                     <i class="fas fa-lock text-monetum-green"></i>
                     <span>End-to-end encrypted</span>
@@ -503,8 +573,8 @@ const htmlTemplate = `<!DOCTYPE html>
             </div>
         </div>
 
-        <!-- Trust Indicators -->
-        <div class="mt-4 flex justify-center gap-6 text-monetum-muted text-xs">
+        <!-- Trust Indicators - Only on desktop -->
+        <div class="trust-indicators text-monetum-muted text-xs mt-3">
             <div class="flex items-center gap-1">
                 <i class="fas fa-link text-monetum-green"></i>
                 <span>Onchain Safety</span>
@@ -525,7 +595,7 @@ const htmlTemplate = `<!DOCTYPE html>
         let currentState = 'welcome';
         let userData = {};
         
-        // Agent avatar URL (random professional male face)
+        // Agent avatar URL
         const AGENT_AVATAR = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face';
 
         const chatContainer = document.getElementById('chatContainer');
@@ -590,7 +660,6 @@ const htmlTemplate = `<!DOCTYPE html>
             messageDiv.className = 'chat-message flex ' + (isAgent ? 'justify-start items-end gap-2' : 'justify-end');
             
             if (isAgent) {
-                // Add avatar for agent messages
                 const avatar = document.createElement('img');
                 avatar.src = AGENT_AVATAR;
                 avatar.alt = 'Alex';
@@ -599,10 +668,10 @@ const htmlTemplate = `<!DOCTYPE html>
             }
             
             const bubble = document.createElement('div');
-            bubble.className = 'max-w-[80%] px-4 py-2 rounded-2xl ' + (isAgent ? 'agent-bubble rounded-bl-sm' : 'user-bubble rounded-tr-sm');
+            bubble.className = 'max-w-[80%] px-3 py-2 rounded-2xl text-sm ' + (isAgent ? 'agent-bubble rounded-bl-sm' : 'user-bubble rounded-tr-sm');
             
             const text = document.createElement('div');
-            text.className = 'text-sm leading-relaxed';
+            text.className = 'leading-relaxed';
             text.innerHTML = formatMessage(content);
             bubble.appendChild(text);
             
@@ -618,7 +687,7 @@ const htmlTemplate = `<!DOCTYPE html>
             const typingDiv = document.createElement('div');
             typingDiv.id = 'typingIndicator';
             typingDiv.className = 'chat-message flex justify-start items-end gap-2';
-            typingDiv.innerHTML = '<img src="' + AGENT_AVATAR + '" alt="Alex" class="agent-avatar"><div class="agent-bubble px-4 py-3 rounded-2xl rounded-bl-sm"><div class="typing-indicator flex gap-1"><span class="w-2 h-2 bg-monetum-green rounded-full"></span><span class="w-2 h-2 bg-monetum-green rounded-full"></span><span class="w-2 h-2 bg-monetum-green rounded-full"></span></div></div>';
+            typingDiv.innerHTML = '<img src="' + AGENT_AVATAR + '" alt="Alex" class="agent-avatar"><div class="agent-bubble px-3 py-2 rounded-2xl rounded-bl-sm"><div class="typing-indicator flex gap-1"><span class="w-2 h-2 bg-monetum-green rounded-full"></span><span class="w-2 h-2 bg-monetum-green rounded-full"></span><span class="w-2 h-2 bg-monetum-green rounded-full"></span></div></div>';
             chatContainer.appendChild(typingDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
@@ -656,10 +725,10 @@ const htmlTemplate = `<!DOCTYPE html>
             if (response.showNewDealButton || response.showCloseButton) {
                 let html = '<div class="flex gap-3 justify-center">';
                 if (response.showNewDealButton) {
-                    html += '<button onclick="sendMessage(\\'new\\')" class="btn-primary px-6 py-2 rounded-xl text-white font-medium text-sm"><i class="fas fa-plus mr-2"></i>New Deal</button>';
+                    html += '<button onclick="sendMessage(\\'new\\')" class="btn-primary px-5 py-2 rounded-xl text-white font-medium text-sm"><i class="fas fa-plus mr-2"></i>New Deal</button>';
                 }
                 if (response.showCloseButton) {
-                    html += '<button onclick="sendMessage(\\'close\\')" class="bg-white border border-gray-300 px-6 py-2 rounded-xl text-monetum-dark font-medium text-sm hover:bg-gray-50"><i class="fas fa-times mr-2"></i>Close</button>';
+                    html += '<button onclick="sendMessage(\\'close\\')" class="bg-white border border-gray-300 px-5 py-2 rounded-xl text-monetum-dark font-medium text-sm"><i class="fas fa-times mr-2"></i>Close</button>';
                 }
                 html += '</div>';
                 inputArea.innerHTML = html;
@@ -667,7 +736,7 @@ const htmlTemplate = `<!DOCTYPE html>
             }
             
             if (response.showConfirmButtons) {
-                inputArea.innerHTML = '<div class="flex gap-3 justify-center"><button onclick="sendMessage(\\'confirm\\')" class="btn-success px-8 py-3 rounded-xl text-white font-medium"><i class="fas fa-check mr-2"></i>Confirm</button><button onclick="sendMessage(\\'cancel\\')" class="btn-danger px-8 py-3 rounded-xl text-white font-medium"><i class="fas fa-times mr-2"></i>Cancel</button></div>';
+                inputArea.innerHTML = '<div class="flex gap-3 justify-center"><button onclick="sendMessage(\\'confirm\\')" class="btn-success px-6 py-3 rounded-xl text-white font-medium"><i class="fas fa-check mr-2"></i>Confirm</button><button onclick="sendMessage(\\'cancel\\')" class="btn-danger px-6 py-3 rounded-xl text-white font-medium"><i class="fas fa-times mr-2"></i>Cancel</button></div>';
                 return;
             }
             
@@ -675,21 +744,21 @@ const htmlTemplate = `<!DOCTYPE html>
                 let inputHtml = '';
                 
                 if (response.inputType === 'select') {
-                    inputHtml = '<select id="userInput" class="input-secure w-full px-4 py-3 rounded-xl focus:outline-none"><option value="" style="color: #94a3b8;">Select ' + response.inputLabel + '...</option>';
+                    inputHtml = '<select id="userInput" class="input-secure w-full px-4 py-3 rounded-xl focus:outline-none text-sm"><option value="" style="color: #94a3b8;">Select ' + response.inputLabel + '...</option>';
                     response.inputOptions.forEach(function(opt) {
                         inputHtml += '<option value="' + opt + '" style="color: #2A2B41;">' + opt + '</option>';
                     });
                     inputHtml += '</select>';
                 } else {
-                    inputHtml = '<input type="' + response.inputType + '" id="userInput" placeholder="' + response.inputPlaceholder + '" class="input-secure w-full px-4 py-3 rounded-xl focus:outline-none" onkeypress="if(event.key === \\'Enter\\') submitInput()">';
+                    inputHtml = '<input type="' + response.inputType + '" id="userInput" placeholder="' + response.inputPlaceholder + '" class="input-secure w-full px-4 py-3 rounded-xl focus:outline-none text-sm" onkeypress="if(event.key === \\'Enter\\') submitInput()">';
                 }
                 
                 let validateBtn = '';
                 if (response.showValidateButton) {
-                    validateBtn = '<button onclick="autoValidate()" class="bg-white border border-monetum-green px-4 py-3 rounded-xl text-monetum-green hover:bg-green-50"><i class="fas fa-sync"></i></button>';
+                    validateBtn = '<button onclick="autoValidate()" class="bg-white border border-monetum-green px-3 py-3 rounded-xl text-monetum-green"><i class="fas fa-sync"></i></button>';
                 }
                 
-                inputArea.innerHTML = '<div class="space-y-3"><div class="flex items-center gap-2 text-xs text-monetum-muted"><i class="fas fa-shield-halved text-monetum-green"></i><span>Secure input · ' + response.inputLabel + '</span></div><div class="flex gap-2">' + inputHtml + '<button onclick="submitInput()" class="btn-primary px-4 py-3 rounded-xl text-white"><i class="fas fa-paper-plane"></i></button>' + validateBtn + '</div></div>';
+                inputArea.innerHTML = '<div class="space-y-2"><div class="flex items-center gap-2 text-xs text-monetum-muted"><i class="fas fa-shield-halved text-monetum-green"></i><span>Secure input · ' + response.inputLabel + '</span></div><div class="flex gap-2">' + inputHtml + '<button onclick="submitInput()" class="btn-primary px-3 py-3 rounded-xl text-white"><i class="fas fa-paper-plane"></i></button>' + validateBtn + '</div></div>';
                 
                 window.currentInputField = response.inputField;
                 
@@ -703,7 +772,6 @@ const htmlTemplate = `<!DOCTYPE html>
         async function sendMessage(message) {
             if (!message || message.trim() === '') return;
             
-            // Don't show user message for "continue" button
             if (message !== 'continue') {
                 addMessage(message, false);
             }
