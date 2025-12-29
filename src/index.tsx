@@ -552,7 +552,23 @@ const htmlTemplate = `<!DOCTYPE html>
 
             <!-- Chat Container - Light gray background -->
             <div id="chatContainer" class="chat-container">
-                <!-- Messages will be inserted here -->
+                <!-- Welcome message - will be removed when chat starts -->
+                <div id="welcomeMessage" class="flex flex-col items-center justify-center h-full text-center px-6">
+                    <div class="w-16 h-16 mb-4 opacity-80">
+                        <svg viewBox="0 0 100 100" class="w-full h-full">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#3DA085" stroke-width="4"/>
+                            <path d="M30 65 L30 35 L50 50 L70 35 L70 65" fill="none" stroke="#3DA085" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M25 50 L50 35 L75 50" fill="none" stroke="#3DA085" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-lg font-semibold text-monetum-dark mb-2">Welcome to Monetum OTC</h2>
+                    <p class="text-sm text-monetum-muted leading-relaxed max-w-xs">
+                        Execute OTC deals securely via chat. Fast, compliant, and fully encrypted.
+                    </p>
+                    <p class="text-sm text-monetum-muted mt-3">
+                        Start the conversation whenever you're ready 👇
+                    </p>
+                </div>
             </div>
 
             <!-- Input Area - White background -->
@@ -859,6 +875,10 @@ const htmlTemplate = `<!DOCTYPE html>
 
         async function startChat() {
             document.getElementById('startButton').style.display = 'none';
+            
+            // Remove welcome message
+            const welcomeMsg = document.getElementById('welcomeMessage');
+            if (welcomeMsg) welcomeMsg.remove();
             
             const response = await fetch('/api/chat', {
                 method: 'POST',
