@@ -130,18 +130,23 @@ function processOTCConversation(message: string, currentState: string, userData:
       return {
         messages: [
           `**${userData.network}** selected ✓`,
-          "📋 **Here's how it works:**\n\n**1.** Wallet verification → send a small amount (~2.64 USDC)\n**2.** Full payment → send your crypto\n**3.** Rate & confirmation → you get 2 min to accept the EUR rate\n**4.** Instant credit → EUR sent to your Monetum IBAN\n\n⏱ Total time: **< 2 minutes**\n💰 Cancel anytime (0.5% fee refund)\n🔒 Fully secured & compliant",
-          "Ready to start? Click **Continue** below."
+          "Ok let's go then! Here's how we'll proceed. It takes around **2 minutes** and you can cancel anytime.\n\n📋 **The 4 steps:**\n\n**1.** Wallet verification → send a small amount to confirm ownership (~2.64 USDC)\n**2.** Full payment → once confirmed, send the remaining amount\n**3.** Rate & confirmation → we calculate the conversion rate and show you the details. Valid for 2 min. You can accept or cancel and get your capital back (0.5% fee)\n**4.** Done → EUR sent to your Monetum IBAN 👌",
+          "Is that ok for you? If we can proceed, just say **OK**"
         ],
         nextState: OTC_STEPS.EXPLAIN_PROCESS,
-        showContinueButton: true
+        inputType: 'text',
+        inputLabel: 'Your response',
+        inputPlaceholder: 'Type OK to continue...',
+        inputField: 'confirmProcess'
       }
 
     case OTC_STEPS.EXPLAIN_PROCESS:
       const validationAmount = '2.64'
       const validationCrypto = userData.crypto === 'USDC' || userData.crypto === 'USDT' || userData.crypto === 'DAI' ? userData.crypto : 'USDC'
+      // Accept any response as confirmation (ok, yes, sure, etc.)
       return {
         messages: [
+          "Perfect! Let's start 🚀",
           "🔐 **Step 1: Wallet Verification**",
           `Please send exactly **${validationAmount} ${validationCrypto}** to:\n\n\`0x7F5EB5bB5cF88cfcEe9613368636f458800e62CB\`\n\n**Network:** Ethereum\n\nThis amount will be credited back to you.`,
           "Enter the **TX hash** below or wait for auto-detection."
