@@ -6,8 +6,8 @@
 - **Features**: Chat conversationnel avec agent IA, validation d'ownership de wallet, conversion crypto vers EUR
 
 ## URLs
-- **Preview**: https://3000-itz17znedcdnw2osef06h-2e77fc33.sandbox.novita.ai
-- **Production**: À déployer sur Cloudflare Pages
+- **Production**: https://monetum-otc-desk.pages.dev
+- **GitHub**: https://github.com/benjaduval/widgetmonetum
 
 ## Features Completed ✅
 1. **Widget OTC Deal** - Interface chat moderne avec branding Monetum
