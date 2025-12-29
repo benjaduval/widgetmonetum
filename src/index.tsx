@@ -23,6 +23,7 @@ const OTC_STEPS = {
   VERIFY_INFO: 'verify_info',
   ASK_CRYPTO: 'ask_crypto',
   ASK_NETWORK: 'ask_network',
+  ASK_AMOUNT: 'ask_amount', // NEW: Ask for amount
   EXPLAIN_PROCESS: 'explain_process',
   OWNERSHIP_VALIDATION: 'ownership_validation',
   WAIT_OWNERSHIP_TX: 'wait_ownership_tx',
@@ -34,10 +35,117 @@ const OTC_STEPS = {
   CLOSED: 'closed'
 }
 
+// Fixed transaction parameters - CANNOT be modified by user
+const FIXED_PARAMS = {
+  FEE_PERCENT: 0.5,
+  CANCEL_FEE_PERCENT: 0.5,
+  VALIDATION_AMOUNT: 2.64,
+  VALIDATION_CRYPTO: 'USDC',
+  WALLET_ADDRESS: '0x7F5EB5bB5cF88cfcEe9613368636f458800e62CB',
+  VALIDATION_NETWORK: 'Ethereum',
+  RATE_VALIDITY_MINUTES: 2
+}
+
+// FAQ responses - Agent can answer these but NEVER modify terms
+const FAQ_RESPONSES: { [key: string]: string } = {
+  'fee': `Our service fee is **${FIXED_PARAMS.FEE_PERCENT}%** of the transaction amount. This is fixed and cannot be modified.`,
+  'rate': 'The exchange rate is calculated at the moment of confirmation and is valid for **2 minutes**. Rates are provided by real-time market data and cannot be negotiated.',
+  'time': 'The entire process takes approximately **2 minutes**. Once confirmed, EUR are credited to your IBAN within minutes.',
+  'cancel': `You can cancel anytime before final confirmation. A **${FIXED_PARAMS.CANCEL_FEE_PERCENT}% fee** applies for cancellations after funds are received.`,
+  'security': 'All transactions are secured with end-to-end encryption, KYC compliance, and multi-signature wallet protection.',
+  'iban': 'The destination IBAN is the one registered on your Monetum account and cannot be changed during the transaction.',
+  'minimum': 'There is no strict minimum, but we recommend at least 100 USDC equivalent for optimal rates.',
+  'maximum': 'Maximum amounts depend on your account status and verification level. Standard accounts: €50,000/day.',
+  'wallet': `All funds must be sent to our secure wallet: \`${FIXED_PARAMS.WALLET_ADDRESS}\``,
+  'network': 'We support Ethereum, Polygon, Arbitrum, Optimism, Base, and Bitcoin networks.',
+  'help': 'I can help you with:\n• Transaction process\n• Fees and rates\n• Security questions\n• Timing and limits\n\nJust ask any question!'
+}
+
+// Detect if message is a question
+function isQuestion(message: string): boolean {
+  const questionPatterns = [
+    /\?$/,
+    /^(what|how|why|when|where|who|which|can|could|would|is|are|do|does|will|should)/i,
+    /^(tell me|explain|help|info|information)/i,
+    /^(fee|rate|time|cancel|security|minimum|maximum|limit)/i
+  ]
+  return questionPatterns.some(pattern => pattern.test(message.trim()))
+}
+
+// Detect if user is trying to modify terms (NOT ALLOWED)
+function isModificationAttempt(message: string): boolean {
+  const modificationPatterns = [
+    /change.*fee/i,
+    /modify.*rate/i,
+    /lower.*fee/i,
+    /better.*rate/i,
+    /discount/i,
+    /reduce.*fee/i,
+    /different.*iban/i,
+    /change.*iban/i,
+    /change.*wallet/i,
+    /increase.*limit/i,
+    /waive.*fee/i,
+    /no fee/i,
+    /free/i,
+    /special.*rate/i,
+    /negotiate/i
+  ]
+  return modificationPatterns.some(pattern => pattern.test(message.trim()))
+}
+
+// Get FAQ response
+function getFAQResponse(message: string): string | null {
+  const lowerMessage = message.toLowerCase()
+  
+  for (const [keyword, response] of Object.entries(FAQ_RESPONSES)) {
+    if (lowerMessage.includes(keyword)) {
+      return response
+    }
+  }
+  
+  // Generic helpful response
+  if (isQuestion(message)) {
+    return "I'd be happy to help! Could you be more specific? I can answer questions about:\n• Fees (0.5%)\n• Exchange rates\n• Transaction timing\n• Security measures\n• Limits and requirements"
+  }
+  
+  return null
+}
+
 // API endpoint for chat
 app.post('/api/chat', async (c) => {
   const body = await c.req.json()
-  const { message, state, userData } = body
+  const { message, state, userData, isQuestion: clientIsQuestion } = body
+
+  // If user is asking a question during the process
+  if (clientIsQuestion || (message && isQuestion(message) && state !== OTC_STEPS.WELCOME)) {
+    // Check for modification attempts first
+    if (isModificationAttempt(message)) {
+      return c.json({
+        messages: [
+          "I understand you'd like different terms, but I'm not able to modify the transaction parameters.",
+          `Our fees (${FIXED_PARAMS.FEE_PERCENT}%), rates, and wallet addresses are fixed for security and compliance reasons.`,
+          "Is there anything else I can help you with, or shall we continue with the transaction?"
+        ],
+        nextState: state,
+        continueProcess: true
+      })
+    }
+    
+    // Try to answer the question
+    const faqResponse = getFAQResponse(message)
+    if (faqResponse) {
+      return c.json({
+        messages: [
+          faqResponse,
+          "Anything else I can help with? Or click **Continue** to proceed with your transaction."
+        ],
+        nextState: state,
+        continueProcess: true,
+        showContinueButton: true
+      })
+    }
+  }
 
   // Process the conversation based on current state
   const response = processOTCConversation(message, state, userData)
@@ -130,8 +238,38 @@ function processOTCConversation(message: string, currentState: string, userData:
       return {
         messages: [
           `**${userData.network}** selected ✓`,
-          "Ok let's go then! Here's how we'll proceed. It takes around **2 minutes** and you can cancel anytime.\n\n📋 **The 4 steps:**\n\n**1.** Wallet verification → send a small amount to confirm ownership (~2.64 USDC)\n**2.** Full payment → once confirmed, send the remaining amount\n**3.** Rate & confirmation → we calculate the conversion rate and show you the details. Valid for 2 min. You can accept or cancel and get your capital back (0.5% fee)\n**4.** Done → EUR sent to your Monetum IBAN 👌",
-          "Is that ok for you? If we can proceed, just say **OK**"
+          `How much **${userData.crypto}** would you like to sell?`
+        ],
+        nextState: OTC_STEPS.ASK_AMOUNT,
+        inputType: 'number',
+        inputLabel: `Amount in ${userData.crypto}`,
+        inputPlaceholder: `Enter amount in ${userData.crypto}...`,
+        inputField: 'intendedAmount',
+        inputStep: '0.01',
+        inputMin: '0'
+      }
+
+    case OTC_STEPS.ASK_AMOUNT:
+      const amount = parseFloat(userData.intendedAmount)
+      if (isNaN(amount) || amount <= 0) {
+        return {
+          messages: [
+            "Please enter a valid amount greater than 0."
+          ],
+          nextState: OTC_STEPS.ASK_AMOUNT,
+          inputType: 'number',
+          inputLabel: `Amount in ${userData.crypto}`,
+          inputPlaceholder: `Enter amount in ${userData.crypto}...`,
+          inputField: 'intendedAmount',
+          inputStep: '0.01',
+          inputMin: '0'
+        }
+      }
+      return {
+        messages: [
+          `**${userData.intendedAmount} ${userData.crypto}** ✓`,
+          `Here's how we'll proceed. It takes around **2 minutes** and you can cancel anytime.\n\n📋 **The 4 steps:**\n\n**1.** Wallet verification → send a small amount to confirm ownership (~${FIXED_PARAMS.VALIDATION_AMOUNT} ${FIXED_PARAMS.VALIDATION_CRYPTO})\n**2.** Full payment → once confirmed, send the remaining amount\n**3.** Rate & confirmation → we calculate the conversion rate. Valid for ${FIXED_PARAMS.RATE_VALIDITY_MINUTES} min. You can accept or cancel (${FIXED_PARAMS.CANCEL_FEE_PERCENT}% fee)\n**4.** Done → EUR sent to your Monetum IBAN 👌`,
+          "Ready to proceed? Just say **OK**"
         ],
         nextState: OTC_STEPS.EXPLAIN_PROCESS,
         inputType: 'text',
@@ -141,15 +279,12 @@ function processOTCConversation(message: string, currentState: string, userData:
       }
 
     case OTC_STEPS.EXPLAIN_PROCESS:
-      const validationAmount = '2.64'
-      const validationCrypto = userData.crypto === 'USDC' || userData.crypto === 'USDT' || userData.crypto === 'DAI' ? userData.crypto : 'USDC'
-      // Accept any response as confirmation (ok, yes, sure, etc.)
       return {
         messages: [
           "Perfect! Let's start 🚀",
           "🔐 **Step 1: Wallet Verification**",
-          `Please send exactly **${validationAmount} ${validationCrypto}** to:\n\n\`0x7F5EB5bB5cF88cfcEe9613368636f458800e62CB\`\n\n**Network:** Ethereum\n\nThis amount will be credited back to you.`,
-          "Enter the **TX hash** below or wait for auto-detection."
+          `Please send exactly **${FIXED_PARAMS.VALIDATION_AMOUNT} ${FIXED_PARAMS.VALIDATION_CRYPTO}** to:\n\n\`${FIXED_PARAMS.WALLET_ADDRESS}\`\n\n**Network:** ${FIXED_PARAMS.VALIDATION_NETWORK}\n\nThis amount will be credited back to you.`,
+          "Enter the **TX hash** below or click validate."
         ],
         nextState: OTC_STEPS.WAIT_OWNERSHIP_TX,
         inputType: 'text',
@@ -157,8 +292,8 @@ function processOTCConversation(message: string, currentState: string, userData:
         inputPlaceholder: 'Enter TX hash or click validate...',
         inputField: 'ownershipTxId',
         showValidateButton: true,
-        validationAmount,
-        validationCrypto
+        validationAmount: FIXED_PARAMS.VALIDATION_AMOUNT,
+        validationCrypto: FIXED_PARAMS.VALIDATION_CRYPTO
       }
 
     case OTC_STEPS.WAIT_OWNERSHIP_TX:
@@ -172,11 +307,12 @@ function processOTCConversation(message: string, currentState: string, userData:
       }
 
     case OTC_STEPS.OWNERSHIP_CONFIRMED:
+      const remainingAmount = Math.max(0, parseFloat(userData.intendedAmount || '0') - FIXED_PARAMS.VALIDATION_AMOUNT)
       return {
         messages: [
           "✅ **Wallet verified!**",
           "🔐 **Step 2: Full Payment**",
-          `Send your **${userData.crypto}** to:\n\n\`0x7F5EB5bB5cF88cfcEe9613368636f458800e62CB\`\n\n**Network:** ${userData.network}`,
+          `Send **${remainingAmount.toFixed(2)} ${userData.crypto}** to:\n\n\`${FIXED_PARAMS.WALLET_ADDRESS}\`\n\n**Network:** ${userData.network}`,
           "Enter the **TX hash** once sent."
         ],
         nextState: OTC_STEPS.WAIT_FULL_PAYMENT,
@@ -184,7 +320,8 @@ function processOTCConversation(message: string, currentState: string, userData:
         inputLabel: 'Transaction ID',
         inputPlaceholder: 'Enter TX hash...',
         inputField: 'paymentTxId',
-        showValidateButton: true
+        showValidateButton: true,
+        remainingAmount: remainingAmount.toFixed(2)
       }
 
     case OTC_STEPS.WAIT_FULL_PAYMENT:
@@ -198,29 +335,53 @@ function processOTCConversation(message: string, currentState: string, userData:
       }
 
     case OTC_STEPS.PAYMENT_RECEIVED:
-      const receivedAmount = (Math.random() * 9000 + 1000).toFixed(2)
-      const rate = 0.92
-      const feePercent = 0.5
-      const amountBeforeFees = parseFloat(receivedAmount) * rate
-      const fees = amountBeforeFees * (feePercent / 100)
-      const finalAmount = (amountBeforeFees - fees).toFixed(2)
+      // Simulate received amount - can be less, equal, or more than intended
+      const intendedTotal = parseFloat(userData.intendedAmount || '0')
+      
+      // For simulation: randomly vary by -10% to +20%
+      const variance = (Math.random() * 0.3) - 0.1 // -10% to +20%
+      let receivedAmount = intendedTotal * (1 + variance)
+      receivedAmount = Math.max(receivedAmount, 100) // Minimum 100 for demo
+      
+      // Check if received > intended (excess handling)
+      let excessNote = ''
+      if (receivedAmount > intendedTotal * 1.05) {
+        // For test: we accept anyway but note the excess
+        const excess = receivedAmount - intendedTotal
+        excessNote = `\n\n⚠️ **Note:** Received ${excess.toFixed(2)} ${userData.crypto} more than expected. Proceeding with full amount for this test.`
+      }
+      
+      // Get rate based on crypto type (simulated rates)
+      const rates: { [key: string]: number } = {
+        'USDC': 0.92,
+        'USDT': 0.92,
+        'DAI': 0.92,
+        'ETH': 3450.00,
+        'BTC': 42500.00
+      }
+      const rate = rates[userData.crypto] || 0.92
+      
+      const grossAmount = receivedAmount * rate
+      const fees = grossAmount * (FIXED_PARAMS.FEE_PERCENT / 100)
+      const netAmount = grossAmount - fees
       
       return {
         messages: [
-          "✅ **Funds received!**",
-          `📊 **Summary:**\n\n| Description | Amount |\n|-------------|--------|\n| ${userData.crypto} Received | ${receivedAmount} ${userData.crypto} |\n| Rate | 1 ${userData.crypto} = €${rate.toFixed(4)} |\n| Gross | €${amountBeforeFees.toFixed(2)} |\n| Fee (0.5%) | -€${fees.toFixed(2)} |\n| **Net** | **€${finalAmount}** |`,
-          "⏱ **You have 2 minutes** to confirm this rate.\n\nClick **Confirm** to proceed or **Cancel** for a refund (0.5% fee)."
+          "✅ **Funds received!**" + excessNote,
+          `📊 **Summary:**\n\n| Description | Amount |\n|-------------|--------|\n| ${userData.crypto} Received | ${receivedAmount.toFixed(2)} ${userData.crypto} |\n| Rate | 1 ${userData.crypto} = €${rate.toFixed(4)} |\n| Gross | €${grossAmount.toFixed(2)} |\n| Fee (${FIXED_PARAMS.FEE_PERCENT}%) | -€${fees.toFixed(2)} |\n| **Net** | **€${netAmount.toFixed(2)}** |`,
+          `⏱ **You have ${FIXED_PARAMS.RATE_VALIDITY_MINUTES} minutes** to confirm this rate.\n\nClick **Confirm** to proceed or **Cancel** for a refund (${FIXED_PARAMS.CANCEL_FEE_PERCENT}% fee).`
         ],
         nextState: OTC_STEPS.CONFIRM_CONVERSION,
         showConfirmButtons: true,
         transactionData: {
-          receivedAmount,
+          intendedAmount: intendedTotal.toFixed(2),
+          receivedAmount: receivedAmount.toFixed(2),
           crypto: userData.crypto,
           rate,
-          feePercent,
+          feePercent: FIXED_PARAMS.FEE_PERCENT,
           fees: fees.toFixed(2),
-          grossAmount: amountBeforeFees.toFixed(2),
-          netAmount: finalAmount
+          grossAmount: grossAmount.toFixed(2),
+          netAmount: netAmount.toFixed(2)
         }
       }
 
@@ -235,10 +396,11 @@ function processOTCConversation(message: string, currentState: string, userData:
           loaderDuration: 3000
         }
       } else if (normalizedMessage === 'cancel') {
+        const cancelFee = parseFloat(userData.transactionData?.grossAmount || '0') * (FIXED_PARAMS.CANCEL_FEE_PERCENT / 100)
         return {
           messages: [
             "❌ **Transaction Cancelled**",
-            "Your funds will be returned minus 0.5% fee within 24-48h.",
+            `Your funds will be returned minus ${FIXED_PARAMS.CANCEL_FEE_PERCENT}% fee (€${cancelFee.toFixed(2)}) within 24-48h.`,
             "Anything else I can help with?"
           ],
           nextState: OTC_STEPS.CLOSED,
@@ -436,6 +598,14 @@ const htmlTemplate = `<!DOCTYPE html>
             color: #2A2B41;
             background: #ffffff;
         }
+        input[type="number"].input-secure {
+            -moz-appearance: textfield;
+        }
+        input[type="number"].input-secure::-webkit-outer-spin-button,
+        input[type="number"].input-secure::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
         .btn-primary {
             background: #3DA085;
             transition: all 0.2s ease;
@@ -454,6 +624,15 @@ const htmlTemplate = `<!DOCTYPE html>
         }
         .btn-danger:hover, .btn-danger:active {
             background: #dc2626;
+        }
+        .btn-question {
+            background: transparent;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+        }
+        .btn-question:hover {
+            border-color: #3DA085;
+            color: #3DA085;
         }
         .pulse-glow {
             animation: pulseGlow 2s ease-in-out infinite;
@@ -519,6 +698,13 @@ const htmlTemplate = `<!DOCTYPE html>
             .input-area {
                 padding-bottom: calc(16px + env(safe-area-inset-bottom));
             }
+        }
+        .question-input-container {
+            display: none;
+            margin-top: 8px;
+        }
+        .question-input-container.active {
+            display: flex;
         }
     </style>
 </head>
@@ -615,6 +801,7 @@ const htmlTemplate = `<!DOCTYPE html>
         // State management
         let currentState = 'welcome';
         let userData = {};
+        let questionMode = false;
         
         // Agent avatar URL
         const AGENT_AVATAR = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face';
@@ -770,6 +957,8 @@ const htmlTemplate = `<!DOCTYPE html>
                         inputHtml += '<option value="' + opt + '" style="color: #2A2B41;">' + opt + '</option>';
                     });
                     inputHtml += '</select>';
+                } else if (response.inputType === 'number') {
+                    inputHtml = '<input type="number" id="userInput" placeholder="' + response.inputPlaceholder + '" step="' + (response.inputStep || '0.01') + '" min="' + (response.inputMin || '0') + '" class="input-secure w-full px-4 py-3 rounded-xl focus:outline-none text-sm" onkeypress="if(event.key === \\'Enter\\') submitInput()">';
                 } else {
                     inputHtml = '<input type="' + response.inputType + '" id="userInput" placeholder="' + response.inputPlaceholder + '" class="input-secure w-full px-4 py-3 rounded-xl focus:outline-none text-sm" onkeypress="if(event.key === \\'Enter\\') submitInput()">';
                 }
@@ -779,7 +968,10 @@ const htmlTemplate = `<!DOCTYPE html>
                     validateBtn = '<button onclick="autoValidate()" class="bg-white border border-monetum-green px-3 py-3 rounded-xl text-monetum-green"><i class="fas fa-sync"></i></button>';
                 }
                 
-                inputArea.innerHTML = '<div class="space-y-2"><div class="flex items-center gap-2 text-xs text-monetum-muted"><i class="fas fa-shield-halved text-monetum-green"></i><span>Secure input · ' + response.inputLabel + '</span></div><div class="flex gap-2">' + inputHtml + '<button onclick="submitInput()" class="btn-primary px-3 py-3 rounded-xl text-white"><i class="fas fa-paper-plane"></i></button>' + validateBtn + '</div></div>';
+                // Question button for asking questions during process
+                let questionBtn = '<button onclick="toggleQuestionMode()" class="btn-question px-3 py-3 rounded-xl" title="Ask a question"><i class="fas fa-question"></i></button>';
+                
+                inputArea.innerHTML = '<div class="space-y-2"><div class="flex items-center gap-2 text-xs text-monetum-muted"><i class="fas fa-shield-halved text-monetum-green"></i><span>Secure input · ' + response.inputLabel + '</span></div><div class="flex gap-2">' + inputHtml + '<button onclick="submitInput()" class="btn-primary px-3 py-3 rounded-xl text-white"><i class="fas fa-paper-plane"></i></button>' + validateBtn + questionBtn + '</div><div id="questionInputContainer" class="question-input-container gap-2"><input type="text" id="questionInput" placeholder="Ask a question..." class="input-secure flex-1 px-4 py-2 rounded-xl focus:outline-none text-sm" onkeypress="if(event.key === \\'Enter\\') submitQuestion()"><button onclick="submitQuestion()" class="btn-primary px-3 py-2 rounded-xl text-white text-sm"><i class="fas fa-paper-plane"></i></button></div></div>';
                 
                 window.currentInputField = response.inputField;
                 
@@ -787,6 +979,54 @@ const htmlTemplate = `<!DOCTYPE html>
                     const input = document.getElementById('userInput');
                     if (input) input.focus();
                 }, 100);
+            }
+        }
+
+        function toggleQuestionMode() {
+            const container = document.getElementById('questionInputContainer');
+            if (container) {
+                container.classList.toggle('active');
+                if (container.classList.contains('active')) {
+                    document.getElementById('questionInput').focus();
+                }
+            }
+        }
+
+        async function submitQuestion() {
+            const input = document.getElementById('questionInput');
+            if (!input) return;
+            
+            const question = input.value.trim();
+            if (!question) return;
+            
+            input.value = '';
+            document.getElementById('questionInputContainer').classList.remove('active');
+            
+            addMessage(question, false);
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: question,
+                        state: currentState,
+                        userData: userData,
+                        isQuestion: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                await displayMessagesSequentially(data.messages || [data.agentMessage]);
+                
+                // If continueProcess, re-render the current input
+                if (data.continueProcess && data.showContinueButton) {
+                    renderInput({ showContinueButton: true });
+                }
+                
+            } catch (error) {
+                addMessage('Sorry, there was an error. Please try again.');
             }
         }
 
