@@ -717,7 +717,7 @@ const htmlTemplate = `<!DOCTYPE html>
                     <div class="flex items-center gap-3">
                         <!-- Monetum Logo -->
                         <div class="w-10 h-10">
-                            <img src="https://www.genspark.ai/api/files/s/IHRx42sH" alt="Monetum" class="w-full h-full object-contain" />
+                            <img src="https://i.postimg.cc/c1RgZpQn/24-590.png" alt="Monetum" class="w-full h-full object-contain" />
                         </div>
                         <div>
                             <h1 class="text-lg font-semibold text-white">Initiate OTC Deal</h1>
@@ -737,7 +737,7 @@ const htmlTemplate = `<!DOCTYPE html>
                 <!-- Welcome message - will be removed when chat starts -->
                 <div id="welcomeMessage" class="flex flex-col items-center justify-center h-full text-center px-6">
                     <div class="w-20 h-20 mb-4">
-                        <img src="https://www.genspark.ai/api/files/s/IHRx42sH" alt="Monetum" class="w-full h-full object-contain" />
+                        <img src="https://i.postimg.cc/c1RgZpQn/24-590.png" alt="Monetum" class="w-full h-full object-contain" />
                     </div>
                     <h2 class="text-lg font-semibold text-monetum-dark mb-2">Welcome to Monetum OTC</h2>
                     <p class="text-sm text-monetum-muted leading-relaxed max-w-xs">
