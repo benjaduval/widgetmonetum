@@ -475,12 +475,12 @@ const htmlTemplate = `<!DOCTYPE html>
                 extend: {
                     colors: {
                         monetum: {
-                            green: '#3DA085',
-                            greenDark: '#2d8a72',
+                            green: '#10d387',
+                            greenDark: '#0bb876',
                             dark: '#2A2B41',
                             light: '#f8fafc',
                             chatBg: '#f5f7f9',
-                            success: '#3DA085',
+                            success: '#10d387',
                             error: '#ef4444',
                             muted: '#64748b'
                         }
@@ -519,8 +519,8 @@ const htmlTemplate = `<!DOCTYPE html>
             }
             .widget-container {
                 border-radius: 16px;
-                border: 2px solid #3DA085;
-                box-shadow: 0 4px 24px rgba(61, 160, 133, 0.15);
+                border: 2px solid #10d387;
+                box-shadow: 0 4px 24px rgba(16, 211, 135, 0.15);
                 overflow: hidden;
             }
         }
@@ -532,7 +532,7 @@ const htmlTemplate = `<!DOCTYPE html>
             min-height: 0;
         }
         .widget-header {
-            background: #3DA085;
+            background: #10d387;
             padding: 16px;
             flex-shrink: 0;
         }
@@ -583,8 +583,8 @@ const htmlTemplate = `<!DOCTYPE html>
             color: #2A2B41;
         }
         .input-secure:focus {
-            border-color: #3DA085;
-            box-shadow: 0 0 0 3px rgba(61, 160, 133, 0.1);
+            border-color: #10d387;
+            box-shadow: 0 0 0 3px rgba(16, 211, 135, 0.1);
             outline: none;
         }
         .input-secure::placeholder {
@@ -607,17 +607,17 @@ const htmlTemplate = `<!DOCTYPE html>
             margin: 0;
         }
         .btn-primary {
-            background: #3DA085;
+            background: #10d387;
             transition: all 0.2s ease;
         }
         .btn-primary:hover, .btn-primary:active {
-            background: #2d8a72;
+            background: #0bb876;
         }
         .btn-success {
-            background: #3DA085;
+            background: #10d387;
         }
         .btn-success:hover, .btn-success:active {
-            background: #2d8a72;
+            background: #0bb876;
         }
         .btn-danger {
             background: #ef4444;
@@ -631,15 +631,15 @@ const htmlTemplate = `<!DOCTYPE html>
             color: #64748b;
         }
         .btn-question:hover {
-            border-color: #3DA085;
-            color: #3DA085;
+            border-color: #10d387;
+            color: #10d387;
         }
         .pulse-glow {
             animation: pulseGlow 2s ease-in-out infinite;
         }
         @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 5px rgba(61, 160, 133, 0.3); }
-            50% { box-shadow: 0 0 20px rgba(61, 160, 133, 0.5); }
+            0%, 100% { box-shadow: 0 0 5px rgba(16, 211, 135, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(16, 211, 135, 0.5); }
         }
         .markdown-table {
             width: 100%;
@@ -653,11 +653,11 @@ const htmlTemplate = `<!DOCTYPE html>
             text-align: left;
         }
         .markdown-table th {
-            background: rgba(61, 160, 133, 0.1);
+            background: rgba(16, 211, 135, 0.1);
             color: #2A2B41;
         }
         code {
-            background: rgba(61, 160, 133, 0.1);
+            background: rgba(16, 211, 135, 0.1);
             padding: 2px 6px;
             border-radius: 4px;
             font-family: monospace;
@@ -671,7 +671,7 @@ const htmlTemplate = `<!DOCTYPE html>
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         .user-bubble {
-            background: #3DA085;
+            background: #10d387;
             color: white;
         }
         .agent-avatar {
@@ -715,13 +715,9 @@ const htmlTemplate = `<!DOCTYPE html>
             <div class="widget-header">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <!-- Monetum Logo SVG - White -->
+                        <!-- Monetum Logo -->
                         <div class="w-10 h-10">
-                            <svg viewBox="0 0 100 100" class="w-full h-full">
-                                <circle cx="50" cy="50" r="45" fill="none" stroke="white" stroke-width="5"/>
-                                <path d="M30 65 L30 35 L50 50 L70 35 L70 65" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M25 50 L50 35 L75 50" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
+                            <img src="https://www.genspark.ai/api/files/s/IHRx42sH" alt="Monetum" class="w-full h-full object-contain" />
                         </div>
                         <div>
                             <h1 class="text-lg font-semibold text-white">Initiate OTC Deal</h1>
@@ -740,12 +736,8 @@ const htmlTemplate = `<!DOCTYPE html>
             <div id="chatContainer" class="chat-container">
                 <!-- Welcome message - will be removed when chat starts -->
                 <div id="welcomeMessage" class="flex flex-col items-center justify-center h-full text-center px-6">
-                    <div class="w-16 h-16 mb-4 opacity-80">
-                        <svg viewBox="0 0 100 100" class="w-full h-full">
-                            <circle cx="50" cy="50" r="45" fill="none" stroke="#3DA085" stroke-width="4"/>
-                            <path d="M30 65 L30 35 L50 50 L70 35 L70 65" fill="none" stroke="#3DA085" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M25 50 L50 35 L75 50" fill="none" stroke="#3DA085" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
+                    <div class="w-20 h-20 mb-4">
+                        <img src="https://www.genspark.ai/api/files/s/IHRx42sH" alt="Monetum" class="w-full h-full object-contain" />
                     </div>
                     <h2 class="text-lg font-semibold text-monetum-dark mb-2">Welcome to Monetum OTC</h2>
                     <p class="text-sm text-monetum-muted leading-relaxed max-w-xs">
